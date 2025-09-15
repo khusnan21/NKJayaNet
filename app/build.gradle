@@ -4,17 +4,16 @@ plugins {
 
 android {
     namespace 'com.nkjayanet.app'
-    compileSdk 34   // pakai SDK terbaru
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.nkjayanet.app"
-        minSdk 21        // support Android 5.0 ke atas
+        minSdk 21
         targetSdk 34
         versionCode 1
         versionName "1.0"
 
-        // buat WebView & PHP server
-        multiDexEnabled true
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -28,7 +27,6 @@ android {
         }
     }
 
-    // biar Java 8/11 jalan mulus
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
@@ -38,5 +36,12 @@ android {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.webkit:webkit:1.9.0'   // buat WebView modern
+    implementation 'androidx.webkit:webkit:1.9.0'
+
+    // Pakai versi kotlin-stdlib yang konsisten
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin.stdlib.version}" {
+        // exclude versi lawas agar tidak duplikat
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+    }
 }
