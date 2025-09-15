@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.nkjayanet.app'
+    compileSdk 34   // pakai SDK terbaru
+
+    defaultConfig {
+        applicationId "com.nkjayanet.app"
+        minSdk 21        // support Android 5.0 ke atas
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        // buat WebView & PHP server
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+        }
+    }
+
+    // biar Java 8/11 jalan mulus
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.webkit:webkit:1.9.0'   // buat WebView modern
+}
