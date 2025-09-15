@@ -1,9 +1,9 @@
 package com.nkjayanet.app;
 
-import android.content.Context;
 import android.os.Bundle;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
@@ -12,66 +12,85 @@ import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity {
 
-    private WebView webView;
+    private Process phpProcess;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WebView webView = new WebView(this);
+        setContentView(webView);
 
-        setContentView(R.layout.activity_main);
+        // Extract php-cgi binary
+        File binDir = new File(getFilesDir(), "php");
+        if (!binDir.exists()) binDir.mkdirs();
+        File phpCgi = new File(binDir, "php-cgi");
+        if (!phpCgi.exists()) {
+            copyAsset("php/php-cgi", phpCgi);
+            phpCgi.setExecutable(true);
+        }
 
-        webView = findViewById(R.id.webview);
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
+        // Extract mikhmonv3
+        File wwwDir = new File(getFilesDir(), "mikhmonv3");
+        if (!wwwDir.exists()) {
+            copyAssetFolder("mikhmonv3", wwwDir.getAbsolutePath());
+        }
 
-        // Extract PHP binary + Mikhmonv3 ke internal storage
-        File appDir = getFilesDir();
-        File phpDir = new File(appDir, "php");
-        File wwwDir = new File(appDir, "mikhmonv3");
-
-        copyAssetFolder("php", phpDir.getAbsolutePath());
-        copyAssetFolder("mikhmonv3", wwwDir.getAbsolutePath());
-
-        // kasih executable permission ke php binary
-        File phpBin = new File(phpDir, "php");
-        phpBin.setExecutable(true);
-
-        // Start PHP built-in server
+        // Start HTTP server via php-cgi
         try {
-            String cmd = phpBin.getAbsolutePath() +
-                    " -S 127.0.0.1:8080 -t " + wwwDir.getAbsolutePath();
-            Runtime.getRuntime().exec(cmd);
+            phpProcess = new ProcessBuilder(
+                    phpCgi.getAbsolutePath(),
+                    "-b", "127.0.0.1:8080",
+                    "-c", getFilesDir().getAbsolutePath()
+            )
+            .redirectErrorStream(true)
+            .start();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // buka Mikhmonv3 di WebView
-        webView.loadUrl("http://127.0.0.1:8080/");
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.setWebViewClient(new WebViewClient());
+        webView.loadUrl("http://127.0.0.1:8080/mikhmonv3/");
+    }
+
+    private void copyAsset(String assetPath, File outFile) {
+        try (InputStream in = getAssets().open(assetPath);
+             FileOutputStream out = new FileOutputStream(outFile)) {
+            byte[] buf = new byte[4096];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void copyAssetFolder(String assetFolder, String destPath) {
         try {
-            String[] files = getAssets().list(assetFolder);
-            if (files == null) return;
+            String[] list = getAssets().list(assetFolder);
             File dir = new File(destPath);
             if (!dir.exists()) dir.mkdirs();
-
-            for (String file : files) {
-                InputStream in = getAssets().open(assetFolder + "/" + file);
-                File outFile = new File(destPath, file);
-                FileOutputStream out = new FileOutputStream(outFile);
-
-                byte[] buffer = new byte[1024];
-                int read;
-                while ((read = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, read);
+            for (String name : list) {
+                String assetFilePath = assetFolder + "/" + name;
+                String outFilePath = destPath + "/" + name;
+                String[] sub = getAssets().list(assetFilePath);
+                if (sub != null && sub.length > 0) {
+                    copyAssetFolder(assetFilePath, outFilePath);
+                } else {
+                    copyAsset(assetFilePath, new File(outFilePath));
                 }
-                in.close();
-                out.flush();
-                out.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (phpProcess != null) {
+            phpProcess.destroy();
         }
     }
 }
